@@ -1,7 +1,7 @@
 
 class Tool:
     tools = []
-    tools_prompt = ""
+    tools_prompt: str = ""
 
     @classmethod
     def register(cls, tool_function):

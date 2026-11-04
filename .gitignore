@@ -9,3 +9,12 @@ wheels/
 # Virtual environments
 .venv
 .env
+*.log 
+context.json 
+
+mem
+memories/
+*.db
+
+
+
