@@ -53,6 +53,9 @@ class Message:
                     case Channle.QQ:
                         data += "QQ"
                 assert type(self.content) is User
+                data += "\n[Content] "
+                if self.content.content == "":
+                    self.content.content = "[SYSTEM] 用户输入为空白"
                 self.content.content = data + self.content.content
 
 
