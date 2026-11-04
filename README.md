@@ -1,240 +1,170 @@
 # Agent Project
 
-一个基于 LLM 的 AI 智能体（Agent）服务。通过 FastAPI 提供 SSE 流式接口，智能体接收用户任务后自主运行事件循环：调用 LLM → 解析 JSON 指令 → 执行工具（shell、天气、记忆等）→ 将结果反馈给 LLM，直到任务结束。
+一个基于 OpenAI 兼容接口的 LLM Agent 原型。服务收到消息后，会循环请求模型、解析 JSON 指令、执行注册工具，并通过 SSE 返回 Agent 消息和工具结果。
 
-## 功能特点
+当前入口提供健康检查和两个 QQ 风格的 GET 接口。项目还没有 README 旧版本里提到的 `/stream`、`/stop`、会话恢复 API；上下文也没有按会话持久化。
 
-- **SSE 流式输出**：实时推送智能体消息与工具调用过程
-- **JSON 协议驱动的事件循环**：`print`（输出）/ `tool_use`（调用工具）/ `end_task`（结束任务）
-- **工具注册机制**：使用 `@tool` 装饰器一键注册，工具的 docstring 自动写入系统提示词
-- **多会话（Chapter）管理**：每个会话的上下文持久化到 `context/{id}.json`，可通过 id 恢复历史会话
-- **上下文管理**：超长自动压缩（LLM 摘要）、工具结果自动精简
-- **SQLite 历史记录**：所有对话写入 `database/agent.db`
-- **提示词文件化**：`prompt/agent.md` 与 `prompt/tools.md` 管理系统提示词
+## 功能概览
 
-## 项目结构
+- FastAPI 服务和 SSE 响应
+- 由 `print`、`tool_use`、`end_task` 字段驱动的 JSON 事件循环
+- `@tool` 装饰器注册工具，工具 docstring 会加入系统提示词
+- 通过 `context_length` 配置触发上下文摘要；较长的工具结果会被精简
+- 将用户消息写入 SQLite 历史表
+- 系统提示词从 `prompt/fish.md`、`prompt/agent.md`、`prompt/tools.md` 拼装
 
-```
-.
-├── main.py              # 入口文件，FastAPI 服务（端口 3000）
-├── pyproject.toml       # 项目配置和依赖
-├── src/                 # 核心源码
-│   ├── agent.py         # Agent 主循环与工具分发
-│   ├── LLM.py           # LLM 接口封装（AsyncOpenAI）
-│   ├── context.py       # 上下文管理（压缩/精简）
-│   ├── chapter.py       # 会话管理（chapter.toml + context/{id}.json）
-│   ├── database.py      # SQLite 对话历史
-│   ├── tool.py          # 工具注册器（@tool 装饰器）
-│   ├── module.py        # Message/ToolUse 数据模型与枚举
-│   ├── output.py        # 输出分发（控制台 / WebUI）
-│   └── log.py           # 日志（app.log）
-├── tools/               # 工具集
-│   ├── shell.py         # shell 与 weather 工具
-│   └── memory.py        # memory_get 记忆工具（开发中）
-├── memory/              # 记忆系统（开发中）
-├── prompt/              # 系统提示词
-│   ├── agent.md         # 智能体行为规范
-│   └── tools.md         # 输出 JSON 协议说明
-├── chapter.toml         # 会话索引（id → 名称）
-├── context/             # 会话上下文持久化
-└── database/            # SQLite 数据库
-```
+## 环境要求
 
-## 快速开始
+- Python 3.12 或更高版本
+- [uv](https://docs.astral.sh/uv/)（推荐）
+- 一个可用的 OpenAI 兼容聊天补全 API
 
-1. **环境要求**：Python >= 3.12（本项目使用 [uv](https://docs.astral.sh/uv/) 管理依赖）
-
-2. **安装依赖**：
-
-   ```bash
-   uv sync
-   ```
-
-3. **配置环境变量**：在 `.env` 中配置 LLM 相关参数（兼容任意 OpenAI 格式 API）：
-
-   ```bash
-   model_name=your-model-name
-   base_url=https://api.openai.com/v1
-   api_key=sk-xxx
-   ```
-
-4. **启动服务**：
-
-   ```bash
-   python main.py
-   # 或
-   uv run main.py
-   ```
-
-   服务运行于 `http://0.0.0.0:3000`。
-
-5. **测试**：
-
-   ```bash
-   curl -N -X POST http://localhost:3000/stream \
-     -H "Content-Type: application/json" \
-     -d '{"prompt": "现在几点了？"}'
-   ```
-
-## API 接口
-
-### POST /stream
-
-发起/恢复一次智能体对话，返回 SSE 流。
-
-请求体：
-
-```json
-{
-  "prompt": "现在几点了？",
-  "id": 1788273415
-}
-```
-
-- `prompt`（必填）：用户任务
-- `id`（可选）：会话 id。传入已存在的 id 会恢复该会话的历史上下文；不传则新建会话
-
-SSE 消息格式（`Message` 模型）：
-
-```json
-{
-  "input": 1,
-  "role": "Agent",
-  "content": "让我查看一下当前系统时间。",
-  "output": 1
-}
-```
-
-工具调用时 `content` 为 `ToolUse` 的 JSON：
-
-```json
-{
-  "input": 1,
-  "role": "Tool",
-  "content": "{\"tool_name\":\"shell\",\"args\":[\"date\"],\"result\":{\"stdout\":\"...\",\"stderr\":\"\",\"returncode\":0}}",
-  "output": 1
-}
-```
-
-### POST /stop
-
-停止当前正在运行的智能体任务：
+安装依赖：
 
 ```bash
-curl -X POST http://localhost:3000/stop
+uv sync
 ```
 
-### GET /load_chapter/{id}
+在项目根目录创建 `.env`：
 
-按 id 加载已保存的会话（名称与完整上下文）：
+```dotenv
+DEEPSEEK_MODULE_NAME=your-model-name
+DEEPSEEK_API_BASE=https://api.deepseek.com
+DEEPSEEK_API_KEY=your-api-key
+agent_port=3000
+
+# 可选：上下文摘要设置
+context_length=20
+compress_length=10
+compress_prompt=将以下内容压缩为简短的摘要，简要描述做了什么。
+```
+
+变量名以上述代码读取的名称为准。`LLM` 在应用启动时初始化，因此模型名和 API 地址需要在启动前配置。
+
+## 初始化数据库
+
+服务会把用户消息写入 `./database/agent.db` 的 `AgentData` 表。SQLite 文件可以自动创建，但表需要预先建好：
 
 ```bash
-curl http://localhost:3000/load_chapter/1788273415
+sqlite3 database/agent.db 'CREATE TABLE IF NOT EXISTS AgentData (created_time TEXT, role TEXT, content TEXT);'
 ```
 
-### GET /
+如果没有安装 `sqlite3` 命令，也可以用 Python 创建：
 
-健康检查，返回 `{"message": "Agent is running!"}`。
+```bash
+python -c "import sqlite3; c=sqlite3.connect('database/agent.db'); c.execute('CREATE TABLE IF NOT EXISTS AgentData (created_time TEXT, role TEXT, content TEXT)'); c.commit(); c.close()"
+```
 
-## 智能体工作流程
+## 启动
 
-### 系统提示词构成
+```bash
+uv run python main.py
+```
 
-由三部分拼接而成（见 `src/agent.py` 的 `construct_system_prompt`）：
+服务默认监听 `127.0.0.1:3000`。可通过 `.env` 中的 `agent_port` 修改端口；监听地址目前在 `main.py` 中固定为 `127.0.0.1`。
 
-1. `prompt/agent.md` — 智能体行为规范（制定计划 → 使用工具 → 结束任务）
-2. `prompt/tools.md` — 输出 JSON 协议说明
-3. 所有已注册工具的 docstring（自动收集）
+## HTTP 接口
 
-### 事件循环
+### `GET /`
 
-1. 用户提交 prompt，写入上下文与数据库
-2. LLM 依据系统提示词输出 JSON
-3. 解析 JSON：
-   - `print`：消息直接通过 SSE 推送给用户
-   - `tool_use`：依次执行各工具，结果以 `system` 消息写回上下文
-   - `end_task: true`：结束循环，上下文持久化到 `context/{id}.json`
-4. 若未结束，携带工具结果进入下一轮循环
+健康检查，返回：
 
-### 输出协议
+```json
+{"status":"Ok"}
+```
 
-LLM 必须输出可被解析的 JSON，支持以下字段：
+### `GET /qq?content=...`
 
-| 字段 | 说明 |
-| ---- | ---- |
-| `print` | 字符串数组，直接返回给用户的消息 |
-| `tool_use` | 工具名 → `{"args": [...]}` 的映射，可同时调用多个工具 |
-| `end_task` | 布尔值，任务结束时为 `true`，且必须放在 JSON 末尾 |
+以 QQ 通道标记输入内容，并以 `text/event-stream` 返回 SSE。示例：
+
+```bash
+curl -N --get 'http://127.0.0.1:3000/qq' \
+  --data-urlencode 'content=现在几点了？'
+```
+
+### `GET /qq_offical?user_name=...&content=...`
+
+与 `/qq` 类似，额外接受 `user_name` 查询参数；当前实现没有使用该参数，也没有在此路由中启动 QQ Bot SDK。
+
+SSE 每个事件的 `data:` 内容是可读文本，可能是 Agent 输出，也可能是工具调用结果，例如：
+
+```text
+data: 我先查询一下。
+
+data: [ToolUse] tool_name=shell args={'cmd': ['date']} returns={'stdout': '...', 'stderr': '', 'returncode': 0}
+
+```
+
+接口目前使用 GET 请求，内容应进行 URL 编码；没有 `/stream` POST 接口，也没有会话 id 参数。
+
+## Agent 工作流程
+
+每轮模型输出 JSON，支持以下字段：
+
+| 字段 | 作用 |
+| --- | --- |
+| `print` | 字符串数组，作为 Agent 消息返回 |
+| `tool_use` | 工具名到参数对象的映射；执行结果写回上下文 |
+| `end_task` | 为 `true` 时结束当前循环 |
 
 示例：
 
 ```json
 {
-  "print": ["我需要使用shell工具，获取当前目录下的文件。"],
+  "print": ["我先查看当前时间。"],
   "tool_use": {
-    "shell": {
-      "args": ["ls", "-l"]
-    }
+    "shell": {"cmd": ["date"]}
   },
   "end_task": true
 }
 ```
 
+系统提示词要求模型以 JSON 格式输出。模型返回无法解析的 JSON 时，Agent 会把错误提示写入上下文并继续请求。
+
 ## 内置工具
 
 | 工具 | 说明 |
-| ---- | ---- |
-| `shell(cmd: list[str])` | 执行 shell 命令，返回 stdout / stderr / returncode，智能体的主要工具 |
-| `weather(city: str)` | 查询城市天气（示例占位实现） |
-| `memory_get(keywords: list)` | 根据关键词获取相关记忆（开发中） |
+| --- | --- |
+| `shell(cmd: list[str])` | 执行本机命令，返回标准输出、标准错误和退出码 |
+| `weather(city: str)` | 示例占位实现，固定返回晴天 |
+| `web_search(query: str, count: int = 3)` | 调用 DeepSeek 搜索接口，需要 `DEEPSEEK_API_KEY` |
+| `web_fetch(url: str)` | 调用 DeepSeek 网页抓取接口，需要 `DEEPSEEK_API_KEY` |
+| `memory_get(content: list[str])` | 实验性记忆接口，依赖外部 `./mem` 可执行文件 |
+| `memory_add(content: list[str])` | 实验性记忆接口，依赖外部 `./mem` 可执行文件 |
 
-## 自定义工具
+### 添加工具
 
-使用 `@tool` 装饰器即可注册，docstring 会自动写入系统提示词供 LLM 了解用法：
+在 `tools/` 下定义函数并用 `@tool` 注册，然后在 `tools/__init__.py` 导入：
 
 ```python
-# tools/my_tool.py
 from src.tool import tool
 
 @tool
-def my_tool(args: list):
-    """
-    ## my_tool(args: list), 工具功能描述
-
-    ### 参数：
-    **类型**： list
-    **示例**：
-    "args": [...]
-
-    ### 返回值
-    **类型**： str
-    """
-    return "结果"
+def my_tool(query: str) -> str:
+    """查询某项信息并返回结果。"""
+    return f"查询内容：{query}"
 ```
 
-然后在 `tools/__init__.py` 中导入即可：
+## 项目结构
 
-```python
-from .my_tool import *
+```text
+main.py             FastAPI 入口
+src/agent.py        Agent 主循环、提示词拼装和工具分发
+src/LLM.py          OpenAI 兼容异步客户端封装
+src/context.py      上下文压缩和工具结果精简
+src/database.py     SQLite 历史写入
+src/tool.py         工具注册器
+src/module.py       消息、角色和工具调用数据结构
+tools/              内置工具
+memory/             实验性记忆实现
+prompt/             系统提示词
+showcase/           项目介绍静态页面
 ```
 
-## 配置项
+## 当前限制
 
-| 环境变量 | 必填 | 默认值 | 说明 |
-| -------- | ---- | ------ | ---- |
-| `model_name` | 是 | — | LLM 模型名称 |
-| `base_url` | 是 | — | API 地址（兼容 OpenAI 格式） |
-| `api_key` | 是 | — | API 密钥 |
-| `context_length` | 否 | 20 | 上下文超过该长度时触发压缩 |
-| `compress_length` | 否 | 10 | 压缩时取前 N 条消息做摘要 |
-| `compress_prompt` | 否 | 将以下内容压缩为简短的摘要… | 压缩时使用的提示词 |
-
-## 依赖
-
-- fastapi
-- uvicorn
-- openai
-- httpx[socks]
-- pydantic
-- python-dotenv
-- requests
+- 每个 `Agent` 持有单份上下文；并发请求可能共享状态，不适合多用户并发服务。
+- 当前没有会话隔离、上下文持久化、停止任务接口或 QQ Bot 生命周期集成。
+- `shell` 能执行服务进程可访问的本机命令。只应在可信、受控的环境中使用，不能直接暴露给不可信用户。
+- `memory` 工具依赖仓库外部的 `./mem` 程序，未配置时不可用。
+- 工具说明和实际可运行状态以代码为准；部分功能仍是原型或占位实现。

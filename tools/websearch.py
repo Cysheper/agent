@@ -2,9 +2,6 @@ from src.tool import tool
 import os
 import requests
 
-from dotenv import load_dotenv
-
-load_dotenv()
 
 @tool
 def web_search(query: str, count: int = 3) -> str:

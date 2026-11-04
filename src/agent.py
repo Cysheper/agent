@@ -12,10 +12,10 @@ from .module import *
 
 def construct_system_prompt(path: Path) -> str:
     """ 构造系统提示词
-        在./prompt 下找agent.md tools.md文件
+        在./prompt 下找fish.md agent.md tools.md文件
     """
     if not path.exists():
-        logger.debug(f"不存在的路径或文件: {str(path)}")
+        logger.error(f"不存在的路径或文件: {str(path)}")
         raise Exception(f"不存在的路径或文件: {str(path)}")
 
     # 暂时硬编码文件名
@@ -158,7 +158,6 @@ class Agent:
             data = await self.load_json(respond)
             if not data: continue
             
-
             end_task, message_list = await self.matching(data)
 
             for message in message_list:

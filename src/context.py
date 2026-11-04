@@ -18,7 +18,7 @@ class Context:
             self.llm = llm
             logger.info("Context 初始化成功")
         except Exception as e:
-            logger.info(f"Context 初始化失败: {e}")
+            logger.error(f"Context 初始化失败: {e}")
 
     def construct_context(
         self,

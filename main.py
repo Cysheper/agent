@@ -1,14 +1,10 @@
 from dotenv import load_dotenv
 load_dotenv()
 from src.agent import Agent
-from IO import qq_offical
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from collections.abc import AsyncIterable
 import uvicorn
 import os
-from contextlib import asynccontextmanager
-import asyncio
 from src.module import *
 from fastapi.responses import StreamingResponse
 
@@ -43,13 +39,6 @@ async def qq_offical_func(user_name: str, content: str):
         },
     )
 
-@app.get("/")
-async def root():
-    return {
-        "status": "Ok"
-    }
-
-
 @app.get("/qq")
 async def qq(content: str):
     async def event_stream():
@@ -69,6 +58,13 @@ async def qq(content: str):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "Ok"
+    }
 
 
 if __name__ == "__main__":
