@@ -43,17 +43,8 @@ compress_prompt=将以下内容压缩为简短的摘要，简要描述做了什�
 
 ## 初始化数据库
 
-服务会把用户消息写入 `./database/agent.db` 的 `AgentData` 表。SQLite 文件可以自动创建，但表需要预先建好：
-
-```bash
-sqlite3 database/agent.db 'CREATE TABLE IF NOT EXISTS AgentData (created_time TEXT, role TEXT, content TEXT);'
-```
-
-如果没有安装 `sqlite3` 命令，也可以用 Python 创建：
-
-```bash
-python -c "import sqlite3; c=sqlite3.connect('database/agent.db'); c.execute('CREATE TABLE IF NOT EXISTS AgentData (created_time TEXT, role TEXT, content TEXT)'); c.commit(); c.close()"
-```
+无需手动操作：服务启动时会自动创建 `./database` 目录、`agent.db` 文件和 `AgentData` 表
+（`id` 自增主键 / `created_time` / `role` / `content`），用户消息会写入其中。
 
 ## Windows 一键启动（无需 uv / Node）
 
