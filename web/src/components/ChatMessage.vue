@@ -11,7 +11,8 @@ const shown = ref(0)
 const done = ref(false)
 const html = computed(() => renderMarkdown(props.item.content))
 
-// Agent 消息逐字浮现：时长按长度自适应（200ms ~ 800ms），完成后切换为 Markdown 渲染
+// Agent 消息逐字浮现：时长按长度自适应（500ms ~ 2.4s），完成后切换为 Markdown 渲染。
+// 后端按"轮"吐消息（LLM stream=False + JSON 协议），靠这里制造流式观感
 onMounted(() => {
   if (props.item.role !== 'agent') return
   const total = props.item.content.length
@@ -19,7 +20,7 @@ onMounted(() => {
     done.value = true
     return
   }
-  const duration = Math.min(Math.max(total * 6, 200), 800)
+  const duration = Math.min(Math.max(total * 14, 500), 2400)
   const start = performance.now()
 
   const step = (now: number) => {

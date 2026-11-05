@@ -50,9 +50,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if k.lower() not in SKIP_RESPONSE_HEADERS:
                         self.send_header(k, v)
                 self.end_headers()
-                # SSE 流式透传：边读边写
+                # SSE 流式透传：边读边写。
+                # 注意必须用 read1 而不是 read(大值)：read(n) 会阻塞到攒满 n 字节
+                # 或流结束才返回，整场对话会被囤到最后一次性吐出
                 while True:
-                    chunk = resp.read(65536)
+                    chunk = resp.read1(4096)
                     if not chunk:
                         break
                     self.wfile.write(chunk)
@@ -62,7 +64,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"backend unreachable ({BACKEND}): {e}".encode())
 
-    def log_message(self, fmt, *args):
+    def log_message(self, format, *args):
         pass  # 静默，不打请求日志
 
     def end_headers(self):
