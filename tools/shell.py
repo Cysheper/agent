@@ -1,21 +1,21 @@
 from src.tool import tool
 import subprocess
 
-@tool
-def weather(city: str) -> str:
-    """
-## weather(city: str), 获取城市天气
+# @tool
+# def weather(city: str) -> str:
+#     """
+# ## weather(city: str), 获取城市天气
 
-### 参数：
-- city:
-    类型: str
-    示例："city": "Tokyo"
+# ### 参数：
+# - city:
+#     类型: str
+#     示例："city": "Tokyo"
 
-### 返回值
-类型： str
+# ### 返回值
+# 类型： str
 
-    """
-    return f"The weather of {city} is sunny."
+#     """
+#     return f"The weather of {city} is sunny."
 
 @tool
 def shell(cmd: list[str]) -> dict:
