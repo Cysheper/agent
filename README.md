@@ -57,6 +57,7 @@ compress_prompt=将以下内容压缩为简短的摘要，简要描述做了什�
    - 启动前端 `python serve.py`：直接托管仓库里已编译好的 `web/dist` 静态页面（**不需要安装 Node / 下载 vue 依赖**），并把 `/web`、`/clear` 等接口反向代理到后端
    - 自动打开浏览器 http://localhost:8000
 3. 改过前端源码（`web/`）后，重新编译一次并提交 `web/dist`：`cd web && npm install && npm run build`
+4. 排查"后端有数据、前端收不到"：双击运行 `test.bat`，逐段验证 后端 → 直连 SSE → serve.py 代理 → 前端同款解析，输出 PASS/FAIL 定位问题环节（Linux/WSL 下用 `bash test.sh`）
 
 ## 启动
 
