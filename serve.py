@@ -23,6 +23,9 @@ PROXY_PATHS = {"/web", "/clear", "/qq", "/qq_offical"}
 PASS_HEADERS = ("accept", "user-agent", "accept-language")
 # 不逐条转发的响应头（由 http.server 自己处理）
 SKIP_RESPONSE_HEADERS = ("transfer-encoding", "connection", "content-length")
+# 后端就在本机（127.0.0.1），强制直连：不受 http_proxy / clash / 系统代理劫持，
+# 否则 127.0.0.1 的请求会被发到代理服务器上，连不上本机后端
+OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -41,7 +44,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         headers = {k: v for k, v in self.headers.items() if k.lower() in PASS_HEADERS}
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req) as resp:
+            with OPENER.open(req) as resp:
                 self.send_response(resp.status)
                 for k, v in resp.getheaders():
                     if k.lower() not in SKIP_RESPONSE_HEADERS:
@@ -61,6 +64,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass  # 静默，不打请求日志
+
+    def end_headers(self):
+        # 全部响应禁用缓存（含 SSE 和 index.html），避免浏览器命中旧版前端
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
 
 
 def main():
