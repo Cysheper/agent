@@ -55,6 +55,18 @@ sqlite3 database/agent.db 'CREATE TABLE IF NOT EXISTS AgentData (created_time TE
 python -c "import sqlite3; c=sqlite3.connect('database/agent.db'); c.execute('CREATE TABLE IF NOT EXISTS AgentData (created_time TEXT, role TEXT, content TEXT)'); c.commit(); c.close()"
 ```
 
+## Windows 一键启动（无需 uv / Node）
+
+1. `git clone` 项目后，先把 `.env.example` 复制为 `.env` 并填入你的 API Key（脚本会检查 `DEEPSEEK_API_KEY`、`DEEPSEEK_API_BASE`、`DEEPSEEK_MODULE_NAME`，缺失会提示）。
+2. 双击 `run.bat`（或命令行执行），脚本会自动：
+   - 检查 Python 3.12+（没有会提示安装地址）
+   - 检查 `.env` 环境变量（缺哪个会提示哪个）
+   - 用 pip 安装 `pyproject.toml` 中的全部依赖（不需要 uv）
+   - 启动后端 `python main.py`（端口取 `.env` 的 `agent_port`，默认 3000）
+   - 启动前端 `python serve.py`：直接托管仓库里已编译好的 `web/dist` 静态页面（**不需要安装 Node / 下载 vue 依赖**），并把 `/web`、`/clear` 等接口反向代理到后端
+   - 自动打开浏览器 http://localhost:8000
+3. 改过前端源码（`web/`）后，重新编译一次并提交 `web/dist`：`cd web && npm install && npm run build`
+
 ## 启动
 
 ```bash
@@ -62,6 +74,8 @@ uv run python main.py
 ```
 
 服务默认监听 `127.0.0.1:3000`。可通过 `.env` 中的 `agent_port` 修改端口；监听地址目前在 `main.py` 中固定为 `127.0.0.1`。
+
+开发前端：`cd web && npm run dev`（Vite 会把 `/web`、`/clear` 代理到后端，见 web/README.md）。
 
 ## HTTP 接口
 
@@ -149,6 +163,9 @@ def my_tool(query: str) -> str:
 
 ```text
 main.py             FastAPI 入口
+run.bat             Windows 一键启动脚本（检查环境/装依赖/起服务/开浏览器）
+serve.py            前端静态服务器（托管 web/dist + 反代后端，仅标准库）
+.env.example       环境变量模板
 src/agent.py        Agent 主循环、提示词拼装和工具分发
 src/LLM.py          OpenAI 兼容异步客户端封装
 src/context.py      上下文压缩和工具结果精简
@@ -158,6 +175,7 @@ src/module.py       消息、角色和工具调用数据结构
 tools/              内置工具
 memory/             实验性记忆实现
 prompt/             系统提示词
+web/                前端源码（Vue3 + Vite），编译产物在 web/dist（随仓库分发）
 showcase/           项目介绍静态页面
 ```
 

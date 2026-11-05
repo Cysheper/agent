@@ -19,7 +19,7 @@ def construct_system_prompt(path: Path) -> str:
         raise Exception(f"不存在的路径或文件: {str(path)}")
 
     # 暂时硬编码文件名
-    items = ["fish.md", "agent.md", "tools.md"]
+    items = ["agent.md", "tools.md", "travel.md"]
 
     system_prompt: str = ""
     for i in items:
@@ -99,6 +99,9 @@ class Agent:
     def tools(self):
         return Tool.tools
 
+    def clear(self):
+        self.context.clear()
+
     async def matching(self, data: dict) -> tuple[bool, list]:
         print(data)
         end_task, message_list = False, []
@@ -161,7 +164,6 @@ class Agent:
             end_task, message_list = await self.matching(data)
 
             for message in message_list:
-                print(message.construct())
                 yield f"data: {message.construct()}\n\n"
 
             if end_task or self.is_stop: 

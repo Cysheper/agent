@@ -2,7 +2,7 @@
 __pycache__/
 *.py[oc]
 build/
-dist/
+/dist/
 wheels/
 *.egg-info
 
@@ -15,6 +15,10 @@ context.json
 mem
 memories/
 *.db
+
+# Web 前端 (web/)
+web/node_modules/
+# 注意：web/dist 需要提交到仓库，run.bat 直接服务编译产物，无需 Node
 
 
 

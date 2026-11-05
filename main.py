@@ -59,6 +59,29 @@ async def qq(content: str):
         },
     )
 
+@app.get("/web")
+async def web(content: str):
+    async def event_stream():
+        yield ": Connected Successfully\n\n"
+
+        user = User(content=content)
+        message = Message(input=Channle.WebUI, role=Role.User, content=user, output=Channle.WebUI)
+        async for chunk  in agent.loop(message):
+                yield chunk
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+@app.get("/clear")
+def clear():
+    agent.clear()
 
 @app.get("/")
 async def root():

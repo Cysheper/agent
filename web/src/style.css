@@ -1,0 +1,331 @@
+/* ============ 云游 Wander · 全局样式 ============ */
+
+:root {
+  --bg: #000;
+  --ink: #ededed;
+  --dim: #9a9a9a;
+  --faint: #6a6a6a;
+  --line: #242424;
+  --line-strong: #3d3d3d;
+  --panel: #0d0d0d;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: 'PingFang SC', 'HarmonyOS Sans SC', 'Noto Sans SC',
+    'Source Han Sans SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+textarea {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  resize: none;
+}
+
+::selection {
+  background: #2e2e2e;
+}
+
+/* ============ 布局 ============ */
+
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.topbar {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 2px 8px;
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+.ghost-btn {
+  color: #8a8a8a;
+  font-size: 0.85rem;
+  padding: 4px 2px;
+  transition: color 0.2s;
+}
+.ghost-btn:hover {
+  color: #e6e6e6;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.view-enter-active,
+.view-leave-active {
+  transition: opacity 0.25s ease;
+}
+.view-enter-from,
+.view-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.dock {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--bg);
+  padding: 6px 0 14px;
+}
+.dock-note {
+  margin: 12px 0 0;
+  text-align: center;
+  color: var(--faint);
+  font-size: 0.78rem;
+}
+
+/* ============ 聊天区 ============ */
+
+.chat {
+  flex: 1;
+  padding: 16px 2px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.chat > :first-child {
+  margin-top: auto;
+}
+
+/* ============ 消息 ============ */
+
+.msg {
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+  animation: msg-in 0.3s var(--ease-out) both;
+}
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.msg + .msg {
+  margin-top: 30px;
+}
+.msg.agent + .msg.agent {
+  margin-top: 14px;
+}
+.msg.tool {
+  display: block;
+  margin-top: 22px;
+}
+.msg.user {
+  justify-content: flex-end;
+}
+.msg.error {
+  justify-content: center;
+}
+
+.user-bubble {
+  max-width: 74%;
+  padding: 11px 17px;
+  border-radius: 16px 16px 4px 16px;
+  background: #f2f2f2;
+  color: #111;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.agent-text {
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  word-break: break-word;
+  padding: 2px 0;
+}
+
+.plain {
+  white-space: pre-wrap;
+}
+
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: #9a9a9a;
+  animation: blink 1.1s steps(1) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.err-text {
+  color: #8a8a8a;
+  font-size: 0.95rem;
+}
+
+/* ============ Agent 消息 Markdown ============ */
+
+.md {
+  word-break: break-word;
+}
+.md p {
+  margin: 0.45em 0;
+}
+.md p:first-child {
+  margin-top: 0;
+}
+.md p:last-child {
+  margin-bottom: 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  margin: 0.9em 0 0.5em;
+  line-height: 1.4;
+  font-size: 1.05em;
+  color: #f5f5f5;
+}
+.md h1:first-child,
+.md h2:first-child,
+.md h3:first-child,
+.md h4:first-child {
+  margin-top: 0;
+}
+.md ul,
+.md ol {
+  padding-left: 1.5em;
+  margin: 0.45em 0;
+}
+.md li {
+  margin: 0.25em 0;
+}
+.md code {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 0.86em;
+  background: #141414;
+  color: #d0d0d0;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+.md pre {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+  color: #c9c9c9;
+}
+.md a {
+  color: #d6d6d6;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.md a:hover {
+  color: #fff;
+}
+.md blockquote {
+  margin: 0.6em 0;
+  padding: 2px 14px;
+  border-left: 2px solid #333;
+  color: var(--dim);
+}
+.md table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  font-size: 0.92em;
+}
+.md th,
+.md td {
+  border: 1px solid #2a2a2a;
+  padding: 6px 10px;
+}
+.md hr {
+  border: none;
+  border-top: 1px solid #2a2a2a;
+  margin: 0.8em 0;
+}
+
+/* ============ 响应式 ============ */
+
+@media (max-width: 620px) {
+  .app {
+    padding: 0 16px;
+  }
+  .user-bubble {
+    max-width: 84%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

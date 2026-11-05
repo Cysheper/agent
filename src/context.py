@@ -52,9 +52,12 @@ class Context:
            await self.compress()
 
         if len(self.queue) >= 15:
-            self.clear()
+            self.clean()
 
     def clear(self):
+        self.queue = []
+
+    def clean(self):
         for i in range(max(len(self.queue) - 15, 0)):
             if self.queue[i]["role"] == "system" and "tool_use" in str(self.queue[i]["content"]): # type: ignore
                 try:

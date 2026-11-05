@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Agent Project · 项目介绍</title>
+<style>
+:root { --card:#121a30; --line:#22304f; --txt:#dfe7f7; --dim:#94a3c4; --acc:#5b9cff; }
+* { box-sizing:border-box; }
+body { margin:0; padding:0; color:var(--txt); line-height:1.68;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: radial-gradient(900px 520px at 12% -12%, #1c2c58 0%, rgba(10,14,28,0) 60%),
+              radial-gradient(700px 460px at 100% 0%, #12324a 0%, rgba(10,14,28,0) 55%),
+              #0a0e1c; }
+.wrap { max-width:1020px; margin:0 auto; padding:60px 22px 90px; }
+h1 { font-size:clamp(2rem,5vw,3rem); margin:0 0 10px; letter-spacing:-.02em; }
+h1 span { color:var(--acc); }
+.sub { color:var(--dim); font-size:1.05rem; margin:0 0 22px; max-width:62ch; }
+.badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:44px; }
+.badges span { font-size:.78rem; padding:5px 11px; border-radius:999px; border:1px solid var(--line); color:#b9c8e6; background:rgba(91,156,255,.08); }
+section { margin-top:46px; }
+h2 { font-size:1.18rem; margin:0 0 16px; display:flex; align-items:center; gap:10px; }
+h2::before { content:''; width:6px; height:18px; border-radius:3px; background:var(--acc); display:inline-block; }
+.grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); }
+.card { padding:16px 18px; border:1px solid var(--line); border-radius:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)); }
+.card h3 { margin:0 0 6px; font-size:.98rem; color:#eaf1ff; }
+.card p { margin:0; color:var(--dim); font-size:.9rem; }
+ol.flow { list-style:none; counter-reset:s; padding:0; margin:0; display:grid; gap:10px; }
+ol.flow li { counter-increment:s; position:relative; padding:12px 16px 12px 52px; font-size:.94rem;
+  border:1px solid var(--line); border-radius:12px; background:rgba(18,26,48,.7); }
+ol.flow li::before { content:counter(s); position:absolute; left:14px; top:11px; width:24px; height:24px;
+  border-radius:8px; background:rgba(91,156,255,.16); color:var(--acc); font-size:.82rem; font-weight:600;
+  display:flex; align-items:center; justify-content:center; }
+pre { margin:0; padding:16px 18px; overflow:auto; border:1px solid var(--line); border-radius:12px;
+  background:#080c17; color:#cfe0ff; font-size:.85rem; line-height:1.6;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; }
+table { width:100%; border-collapse:collapse; font-size:.9rem; }
+th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:#b9c8e6; font-weight:600; font-size:.84rem; letter-spacing:.02em; }
+td code, p code, li code { background:rgba(91,156,255,.12); color:#a8c8ff; padding:1px 6px; border-radius:6px; font-size:.86em; font-family: ui-monospace, monospace; }
+ul.lim { margin:0; padding-left:20px; color:var(--dim); font-size:.92rem; }
+ul.lim li { margin-bottom:8px; }
+.warn { border:1px solid rgba(255,180,80,.35); background:rgba(255,180,80,.07); border-radius:12px; padding:12px 16px; font-size:.9rem; color:#f2d3a8; }
+footer { margin-top:60px; padding-top:20px; border-top:1px solid var(--line); color:#6f7fa2; font-size:.82rem; }
+</style>
+</head>
+<body>
+<div class='wrap'>
+  <h1>Agent <span>Project</span></h1>
+  <p class='sub'>一个基于 OpenAI 兼容接口的 LLM Agent 原型。服务收到消息后循环请求模型，解析 JSON 指令，执行注册工具，并通过 SSE 把过程一点点吐回来。</p>
+  <div class='badges'><span>Python 3.12+</span><span>uv</span><span>FastAPI</span><span>SSE 流式</span><span>JSON 事件循环</span><span>工具注册器</span></div>
+
+  <section>
+    <h2>三句话概括</h2>
+    <div class='grid'>
+      <div class='card'><h3>模型只输出 JSON</h3><p>每轮返回 <code>print</code>、<code>tool_use</code>、<code>end_task</code>，服务据此决定说什么、调哪个工具、什么时候停。</p></div>
+      <div class='card'><h3>工具靠装饰器注册</h3><p><code>@tool</code> 把函数收进注册表，函数 docstring 直接被拼进系统提示词，模型看到的就是工具说明书。</p></div>
+      <div class='card'><h3>上下文会自己瘦身</h3><p>超过 <code>context_length</code> 就调模型做摘要，过长的工具结果也会被压成一句话。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>一次对话怎么走</h2>
+    <ol class='flow'>
+      <li>用户消息经 <code>Message</code> 包装，加上通道标记后写进上下文和 SQLite。</li>
+      <li>带系统提示词请求模型，要求 <code>json_object</code> 格式输出。</li>
+      <li>解析 JSON：<code>print</code> 直接产出 Agent 消息，<code>tool_use</code> 逐个执行工具。</li>
+      <li>工具结果作为 system 消息回写上下文，继续下一轮，直到 <code>end_task</code> 为真。</li>
+      <li>全过程中每条消息都以 <code>data:</code> 事件流式返回。</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>模型输出长这样</h2>
+    <pre>{
+  &quot;print&quot;: [&quot;我先查一下现在几点。&quot;],
+  &quot;tool_use&quot;: { &quot;shell&quot;: { &quot;cmd&quot;: [&quot;date&quot;] } },
+  &quot;end_task&quot;: true
+}</pre>
+  </section>
+
+  <section>
+    <h2>HTTP 接口</h2>
+    <table>
+      <thead><tr><th>路由</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /</code></td><td>健康检查，返回 <code>{&quot;status&quot;:&quot;Ok&quot;}</code></td></tr>
+        <tr><td><code>GET /qq?content=...</code></td><td>按 QQ 通道标记输入，返回 <code>text/event-stream</code></td></tr>
+        <tr><td><code>GET /qq_offical?user_name=...&amp;content=...</code></td><td>同上，额外接收昵称参数</td></tr>
+      </tbody>
+    </table>
+    <p></p>
+    <pre>curl -N --get 'http://127.0.0.1:3000/qq' \
+  --data-urlencode 'content=现在几点了？'</pre>
+    <p></p>
+    <pre>data: 我先查一下。
+data: [ToolUse] tool_name=shell args={'cmd': ['date']} returns={'stdout': '...', 'returncode': 0}</pre>
+  </section>
+
+  <section>
+    <h2>内置工具</h2>
+    <table>
+      <thead><tr><th>工具</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>shell(cmd)</code></td><td>执行本机命令，返回 stdout / stderr / returncode，是主力工具</td></tr>
+        <tr><td><code>weather(city)</code></td><td>占位示例，固定返回晴天</td></tr>
+        <tr><td><code>web_search(query, count)</code></td><td>调用 DeepSeek 搜索接口，需要 API Key</td></tr>
+        <tr><td><code>web_fetch(url)</code></td><td>抓网页正文，返回标题与内容</td></tr>
+        <tr><td><code>get_balance()</code></td><td>查询账户余额</td></tr>
+        <tr><td><code>memory_get / memory_add</code></td><td>实验性记忆接口，依赖仓库外部的 ./mem 程序</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>模块划分</h2>
+    <div class='grid'>
+      <div class='card'><h3>main.py</h3><p>FastAPI 入口，三个 GET 路由，端口读 <code>agent_port</code>。</p></div>
+      <div class='card'><h3>src/</h3><p>Agent 循环、LLM 封装、上下文压缩、数据结构、输出通道。</p></div>
+      <div class='card'><h3>tools/</h3><p>shell、weather、搜索、抓取、余额、记忆，全靠 <code>@tool</code> 注册。</p></div>
+      <div class='card'><h3>prompt/</h3><p>fish.md + agent.md + tools.md 拼成系统提示词。</p></div>
+      <div class='card'><h3>IO/</h3><p>OneBot HTTP 版 QQ 封装与官方 botpy 通道。</p></div>
+      <div class='card'><h3>memory/ utils/</h3><p>实验性记忆实现与队列工具。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>目录结构</h2>
+    <pre>main.py            FastAPI 入口与路由
+src/agent.py       Agent 主循环、提示词拼装、工具分发
+src/LLM.py         AsyncOpenAI 封装，json_object 输出
+src/context.py     上下文压缩与工具结果精简
+src/tool.py        @tool 注册器
+src/module.py      Message / Role / Channle / ToolUse
+src/channle.py     输出通道分发
+src/database.py    SQLite 历史写入
+tools/             shell / weather / web_search / web_fetch / balance / memory
+prompt/            fish.md  agent.md  tools.md
+IO/qq/qq.py        OneBot HTTP 实现
+IO/qq_offical.py   QQ 官方 botpy 通道
+memory/ utils/     实验性记忆与队列</pre>
+  </section>
+
+  <section>
+    <h2>已知限制</h2>
+    <div class='warn'>shell 能执行服务进程可访问的本机命令，只适合在可信环境里跑，不能直接暴露给不可信用户。</div>
+    <p></p>
+    <ul class='lim'>
+      <li>每个 Agent 只有一份上下文，并发请求会共享状态，没有会话隔离与持久化。</li>
+      <li>没有停止任务接口，QQ Bot 生命周期也还没接上，botpy 相关代码仍是注释状态。</li>
+      <li>memory 工具依赖仓库外部的 ./mem 可执行文件，未配置时不可用。</li>
+      <li>本页是静态介绍页，不参与项目运行，也没有改动仓库里任何一行代码。</li>
+    </ul>
+  </section>
+
+  <footer>Agent Project · 静态介绍页 · 单文件 HTML，无外部依赖</footer>
+</div>
+</body>
+</html>
